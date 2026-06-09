@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Business Card Maker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #ff2a2a;
+            --bg-dark: #111111;
+            --text-light: #ffffff;
+            --text-gray: #a0a0a0;
+            --ui-bg: linear-gradient(145deg, #1e2024, #121315);
+            --app-max-width: 480px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        body {
+            background: #090a0b;
+            color: var(--text-light);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* Responsive Viewport for Mobile Design */
+        #app-viewport {
+            width: 100%;
+            max-width: var(--app-max-width);
+            height: 100vh;
+            background: var(--ui-bg);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 0 40px rgba(0,0,0,0.8);
+            overflow: hidden;
+        }
+
+        /* --- LOCKED TOP PREVIEW CONTAINER --- */
+        #preview-section {
+            width: 100%;
+            padding: 20px 15px;
+            background: #000000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+            z-index: 10;
+            flex-shrink: 0;
+            border-bottom: 2px solid #1a1c1f;
+        }
+
+        /* High-Visibility Toggle Switcher */
+        .mode-switcher {
+            display: flex;
+            background: #16181b;
+            padding: 5px;
+            border-radius: 30px;
+            width: 100%;
+            max-width: 280px;
+            border: 1px solid #2d3139;
+            position: relative;
+            z-index: 20;
+        }
+
+        .switch-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #8a909a;
+            padding: 12px 0;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .switch-btn.active {
+            background: linear-gradient(90deg, #ff0f47, var(--primary-color));
+            color: #ffffff;
+            box-shadow: 0 4px 15px rgba(255, 42, 42, 0.4);
+        }
+
+        /* Card Preview Frame Window */
+        .preview-window {
+            width: 100%;
+            position: relative;
+            margin: 0 auto;
+            overflow: visible;
+        }
+
+        /* Absolute Responsive Programmatic Scaler */
+        .card-scaler {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 1050px;
+            height: 600px;
+            transform-origin: top center; /* FIXED: Prevents offscreen alignment bug */
+            display: none;
+        }
+
+        .card-scaler.active-side {
+            display: block;
+        }
+
+        /* Native 300 DPI Canvas Size Dimensions */
+        .card {
+            width: 1050px;
+            height: 600px;
+            background-color: var(--bg-dark);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+        }
+
+        /* Vector Inline Pattern Wrapper */
+        .pattern-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .pattern-overlay svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Front Card Layout Contents */
+        .front-content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: center;
+            height: 100%;
+            padding-left: 150px;
+        }
+
+        .logo-box {
+            width: 90px;
+            height: 90px;
+            border: 12px solid var(--primary-color);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 25px;
+            transform: rotate(45deg);
+        }
+
+        .logo-inner {
+            width: 30px;
+            height: 30px;
+            border-top: 10px solid var(--primary-color);
+            border-right: 10px solid var(--primary-color);
+            border-radius: 3px;
+            transform: rotate(-45deg) translate(-5px, 5px);
+        }
+
+        .brand-name-front {
+            font-size: 44px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            margin-bottom: 6px;
+        }
+
+        .tagline-front {
+            font-size: 16px;
+            font-weight: 400;
+            letter-spacing: 6px;
+            color: var(--text-gray);
+            text-transform: uppercase;
+        }
+
+        /* Back Card Layout Contents */
+        .back-content {
+            position: relative;
+            z-index: 2;
+            height: 100%;
+            padding: 100px 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .person-name {
+            font-size: 48px;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        .person-title {
+            font-size: 20px;
+            color: var(--text-gray);
+            margin-top: 10px;
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+
+        .divider {
+            width: 260px;
+            height: 5px;
+            background: linear-gradient(to right, var(--primary-color) 35%, #fff 35%);
+            margin-bottom: 45px;
+        }
+
+        .info-list {
+            display: flex;
+            flex-direction: column;
+            gap: 22px;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+        }
+
+        .info-icon {
+            width: 45px;
+            height: 45px;
+            background: var(--primary-color);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            border-radius: 6px;
+            clip-path: polygon(20% 0%, 100% 0%, 100% 100%, 20% 100%, 0% 50%);
+            padding-left: 4px;
+        }
+
+        .info-text {
+            font-size: 20px;
+            color: #e2e8f0;
+            font-weight: 600;
+        }
+
+        /* --- SMOOTH SCROLL EDITOR PANEL --- */
+        #editor-section {
+            flex: 1;
+            padding: 25px 20px;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+            padding-bottom: 115px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        #editor-section::-webkit-scrollbar {
+            width: 6px;
+        }
+        #editor-section::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #editor-section::-webkit-scrollbar-thumb {
+            background: #2d3139;
+            border-radius: 10px;
+        }
+
+        .input-group {
+            margin-bottom: 22px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 11px;
+            color: var(--text-gray);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 700;
+        }
+
+        .input-group input {
+            width: 100%;
+            background: #17181c;
+            border: 1px solid #2b2f36;
+            color: #fff;
+            padding: 15px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus {
+            border-color: var(--primary-color);
+            background: #1f2126;
+            box-shadow: 0 0 14px rgba(255, 42, 42, 0.15);
+        }
+
+        /* Custom Theme Color Picker Wrapper */
+        .color-picker-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        input[type="color"] {
+            -webkit-appearance: none;
+            border: none;
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            cursor: pointer;
+            padding: 0;
+            background: transparent;
+        }
+        
+        input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+        
+        input[type="color"]::-webkit-color-swatch {
+            border: 1px solid #2d3139;
+            border-radius: 12px;
+        }
+
+        #color-hex {
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        /* Sticky Action Floating Bar Overlay */
+        .action-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px;
+            background: linear-gradient(transparent, #111215 45%);
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        .btn-save {
+            width: 100%;
+            background: linear-gradient(90deg, #ff0f47, var(--primary-color));
+            color: #fff;
+            border: none;
+            padding: 16px;
+            font-size: 14px;
+            font-weight: 700;
+            border-radius: 30px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            box-shadow: 0 10px 25px rgba(255, 42, 42, 0.4);
+            cursor: pointer;
+            pointer-events: auto;
+            transition: all 0.2s ease;
+        }
+
+        /* Offscreen Production Rendering Sandbox Container */
+        #render-sandbox {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 1170px;
+            height: auto;
+            opacity: 0;
+            z-index: -9999;
+            pointer-events: none;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-viewport">
+    
+        <div id="preview-section">
+            <div class="mode-switcher">
+                <button class="switch-btn active" id="btn-show-front" onclick="switchSide('front')">Front</button>
+                <button class="switch-btn" id="btn-show-back" onclick="switchSide('back')">Back</button>
+            </div>
+
+            <div class="preview-window">
+                <div class="card-scaler active-side" id="scaler-front">
+                    <div class="card" id="card-front">
+                        <div class="pattern-overlay" id="pattern-front"></div>
+                        <div class="front-content">
+                            <div class="logo-box"><div class="logo-inner"></div></div>
+                            <div class="brand-name-front" id="out-brand">SHAGOR</div>
+                            <div class="tagline-front" id="out-tagline">PHOTO EDITOR</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-scaler" id="scaler-back">
+                    <div class="card" id="card-back">
+                        <div class="pattern-overlay" id="pattern-back"></div>
+                        <div class="back-content">
+                            <div class="person-name" id="out-name">MARK SMITH</div>
+                            <div class="person-title" id="out-title">Developer | Shagor Photo Editor</div>
+                            <div class="divider"></div>
+                            <div class="info-list">
+                                <div class="info-item">
+                                    <div class="info-icon"><i class="fa-solid fa-location-dot"></i></div>
+                                    <div class="info-text" id="out-address">Savar, Dhaka Division</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-icon"><i class="fa-solid fa-phone"></i></div>
+                                    <div class="info-text" id="out-phone">+880 1234 567890</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-icon"><i class="fa-solid fa-envelope"></i></div>
+                                    <div class="info-text" id="out-email">contact@shagor-app.com</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-icon"><i class="fa-solid fa-globe"></i></div>
+                                    <div class="info-text" id="out-web">www.shagor-app.com</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="editor-section">
+            <div class="input-group">
+                <label>Brand Theme Color</label>
+                <div class="color-picker-wrapper">
+                    <input type="color" id="in-color" value="#ff2a2a">
+                    <span id="color-hex">#FF2A2A</span>
+                </div>
+            </div>
+            <div class="input-group">
+                <label>Brand Name (Front)</label>
+                <input type="text" id="in-brand" value="SHAGOR">
+            </div>
+            <div class="input-group">
+                <label>Tagline (Front)</label>
+                <input type="text" id="in-tagline" value="PHOTO EDITOR">
+            </div>
+            <div class="input-group">
+                <label>Your Name</label>
+                <input type="text" id="in-name" value="MARK SMITH">
+            </div>
+            <div class="input-group">
+                <label>Job Title & Company</label>
+                <input type="text" id="in-title" value="Developer | Shagor Photo Editor">
+            </div>
+            <div class="input-group">
+                <label>Address Location</label>
+                <input type="text" id="in-address" value="Savar, Dhaka Division">
+            </div>
+            <div class="input-group">
+                <label>Phone Line Number</label>
+                <input type="text" id="in-phone" value="+880 1234 567890">
+            </div>
+            <div class="input-group">
+                <label>Email Link Address</label>
+                <input type="text" id="in-email" value="contact@shagor-app.com">
+            </div>
+            <div class="input-group">
+                <label>Website URL</label>
+                <input type="text" id="in-web" value="www.shagor-app.com">
+            </div>
+        </div>
+
+        <div class="action-container">
+            <button class="btn-save" id="btn-save">Save HD Presentation</button>
+        </div>
+
+    </div>
+
+    <div id="render-sandbox"></div>
+
+    <script>
+        // --- 1. FIXED SCREEN TOGGLE VISIBILITY SYSTEM ---
+        function switchSide(side) {
+            document.querySelectorAll('.switch-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.card-scaler').forEach(scaler => scaler.classList.remove('active-side'));
+            
+            if(side === 'front') {
+                document.getElementById('btn-show-front').classList.add('active');
+                document.getElementById('scaler-front').classList.add('active-side');
+            } else {
+                document.getElementById('btn-show-back').classList.add('active');
+                document.getElementById('scaler-back').classList.add('active-side');
+            }
+            resizeCards();
+        }
+
+        // --- 2. RESILIENT CARD PREVIEW AUTO-SCALING SYSTEM ---
+        function resizeCards() {
+            const previewWindow = document.querySelector('.preview-window');
+            const previewWidth = previewWindow.clientWidth || 360;
+            const cardNativeWidth = 1050;
+            const scale = previewWidth / cardNativeWidth;
+            
+            // Set explicit viewport matching bounds
+            previewWindow.style.height = `${600 * scale}px`;
+            
+            document.querySelectorAll('.card-scaler').forEach(scaler => {
+                scaler.style.transform = `translateX(-50%) scale(${scale})`;
+            });
+        }
+        window.addEventListener('resize', resizeCards);
+        window.addEventListener('load', resizeCards);
+        setTimeout(resizeCards, 50);
+
+        // --- 3. INLINE VECTOR SVG HALFTONE INJECTION ENGINE ---
+        function generateTrianglePattern(color) {
+            const width = 1050;
+            const height = 600;
+            const size = 35; 
+            const h = size * Math.sqrt(3) / 2; 
+            
+            let svg = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">`;
+            
+            for (let row = -2; row < (height / h) + 2; row++) {
+                for (let col = 10; col < (width / (size/2)) + 2; col++) {
+                    let isUp = (row + col) % 2 === 0;
+                    let cx = col * (size / 2);
+                    let cy = row * h;
+                    let fadeStart = width * 0.45; 
+                    let scale = 0;
+                    
+                    if (cx > fadeStart) {
+                        let distance = cx - fadeStart;
+                        let maxDistance = width - fadeStart;
+                        scale = Math.min(1, distance / maxDistance);
+                        if (scale < 0.9) scale = scale * (0.2 + Math.random() * 0.8);
+                    }
+
+                    if (scale > 0.05) {
+                        let pts = isUp ?
+                            `${cx},${cy - (h/2)*scale} ${cx - (size/2)*scale},${cy + (h/2)*scale} ${cx + (size/2)*scale},${cy + (h/2)*scale}` :
+                            `${cx - (size/2)*scale},${cy - (h/2)*scale} ${cx + (size/2)*scale},${cy - (h/2)*scale} ${cx},${cy + (h/2)*scale}`;
+                        svg += `<polygon points="${pts}" fill="${color}" />`;
+                    }
+                }
+            }
+            svg += `</svg>`;
+            return svg;
+        }
+
+        function updatePattern() {
+            const color = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
+            const patternSVG = generateTrianglePattern(color);
+            document.getElementById('pattern-front').innerHTML = patternSVG;
+            document.getElementById('pattern-back').innerHTML = patternSVG;
+        }
+
+        // --- 4. REALTIME DATA MUTATION TRANSFERS ---
+        const inputs = ['brand', 'tagline', 'name', 'title', 'address', 'phone', 'email', 'web'];
+        inputs.forEach(id => {
+            const inputEl = document.getElementById(`in-${id}`);
+            const outEl = document.getElementById(`out-${id}`);
+            if(inputEl && outEl) {
+                outEl.innerText = inputEl.value;
+                inputEl.addEventListener('input', (e) => { outEl.innerText = e.target.value; });
+            }
+        });
+
+        document.getElementById('in-color').addEventListener('input', (e) => {
+            const color = e.target.value;
+            document.documentElement.style.setProperty('--primary-color', color);
+            document.getElementById('color-hex').innerText = color.toUpperCase();
+            updatePattern();
+        });
+
+        updatePattern();
+
+        // --- 5. HIGH-SPEED OPTIMIZED NATIVE RESOLUTION SAVING ENGINE ---
+        document.getElementById('btn-save').addEventListener('click', async () => {
+            const btn = document.getElementById('btn-save');
+            btn.innerText = "SAVING INSTANTLY...";
+            btn.disabled = true;
+            
+            try {
+                const sandbox = document.getElementById('render-sandbox');
+                sandbox.innerHTML = ''; 
+                
+                const presentationLayout = document.createElement('div');
+                presentationLayout.style.backgroundColor = '#f0f2f5'; 
+                presentationLayout.style.padding = '60px 40px';        
+                presentationLayout.style.display = 'flex';
+                presentationLayout.style.flexDirection = 'column';     
+                presentationLayout.style.alignItems = 'center';
+                presentationLayout.style.gap = '50px';                 
+                presentationLayout.style.width = '1130px';              
+                
+                const frontCardNode = document.getElementById('card-front').cloneNode(true);
+                const backCardNode = document.getElementById('card-back').cloneNode(true);
+                
+                frontCardNode.style.transform = 'none';
+                frontCardNode.style.display = 'block';
+                frontCardNode.style.position = 'relative';
+                
+                backCardNode.style.transform = 'none';
+                backCardNode.style.display = 'block';
+                backCardNode.style.position = 'relative';
+                
+                presentationLayout.appendChild(frontCardNode);
+                presentationLayout.appendChild(backCardNode);
+                sandbox.appendChild(presentationLayout);
+
+                // Reduced delay loop for optimized rendering speeds
+                await new Promise(resolve => setTimeout(resolve, 80));
+
+                // OPTIMIZED: Using native scale: 1 for instantaneous processing at true HD print specifications
+                const canvas = await html2canvas(presentationLayout, {
+                    scale: 1, 
+                    backgroundColor: '#f0f2f5',
+                    useCORS: true,
+                    allowTaint: true,
+                    logging: false
+                });
+
+                sandbox.innerHTML = '';
+                const base64Image = canvas.toDataURL('image/png');
+
+                if (window.Android && window.Android.saveBase64Image) {
+                    window.Android.saveBase64Image(base64Image);
+                } else {
+                    const link = document.createElement('a');
+                    link.download = `BusinessCard_Premium_${Date.now()}.png`;
+                    link.href = base64Image;
+                    link.click();
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                btn.innerText = "Save HD Presentation";
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

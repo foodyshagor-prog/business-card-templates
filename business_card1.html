@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Business Card Maker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --primary-red: #c01920;
+            --dark-accent: #1a202c;
+            --text-dark: #333;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #064e3b 100%);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            color: #fff;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; 
+        }
+
+        /* --- FIXED TOP PREVIEW SECTION --- */
+        .preview-section {
+            flex-shrink: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+
+        .preview-section h2 {
+            font-size: 1rem;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #e2e8f0;
+            text-align: center;
+        }
+
+        .switch-container {
+            display: flex;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 25px;
+            padding: 3px;
+            margin-bottom: 12px;
+            width: 100%;
+            max-width: 280px;
+            margin-left: auto;
+            margin-right: auto;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .switch-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .switch-btn.active {
+            background: var(--primary-red);
+            color: #fff;
+            box-shadow: 0 4px 10px rgba(192, 25, 32, 0.3);
+        }
+
+        .preview-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            overflow: hidden;
+            min-height: 210px;
+        }
+
+        .card-scaler {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+        }
+
+        .card {
+            width: 340px;
+            height: 200px;
+            background-color: #fff;
+            background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20.5V18H0v-2h20v-2H0v-2h20v-2H0V8h20V6H0V4h20V2H0V0h22v20h2v-20h2v20h2v-20h2v20h2v-20h2v20h2v-20h2v20h2v-20h2v22H20v-1.5z' fill='%23000000' fill-opacity='0.02' fill-rule='evenodd'/%3E%3C/svg%3E");
+            border-radius: 16px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+            color: var(--text-dark);
+            display: flex;
+            flex-shrink: 0;
+        }
+
+        .preview-wrapper.show-front #scaler-back { display: none; }
+        .preview-wrapper.show-back #scaler-front { display: none; }
+
+        @media (max-width: 375px) {
+            .card-scaler { transform: scale(0.86); margin: -14px 0; }
+            .preview-wrapper { min-height: 180px; }
+        }
+        @media (max-width: 335px) {
+            .card-scaler { transform: scale(0.76); margin: -24px 0; }
+            .preview-wrapper { min-height: 160px; }
+        }
+
+        /* --- INDEPENDENTLY SCROLLABLE TOOL SECTION --- */
+        .scrollable-tools {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 16px;
+            padding-bottom: 90px;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .scrollable-tools h2 {
+            font-size: 1.1rem;
+            margin-bottom: 14px;
+            color: #f1f5f9;
+            border-left: 3px solid var(--primary-red);
+            padding-left: 8px;
+        }
+
+        /* --- FRONT CARD INTERNAL STYLING --- */
+        .front-content {
+            width: 60%; height: 100%; padding: 12px;
+            position: relative; z-index: 3;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        .brand-name { font-size: 1.4rem; font-weight: 700; color: var(--primary-red); font-family: serif; text-align: center; line-height: 1.1; }
+        .sub-brand { font-size: 1.2rem; font-family: 'Brush Script MT', cursive, serif; color: #000; margin-bottom: 20px; }
+        .contact-pill {
+            position: absolute; bottom: 20px; left: 0; background: var(--primary-red); color: #fff;
+            padding: 6px 12px 6px 40px; border-radius: 0 20px 20px 0; font-size: 0.65rem; font-weight: bold; display: flex; flex-direction: column;
+        }
+        .phone-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--primary-red); }
+        
+        /* Fixed Image Container Setup for Safe Canvas Export */
+        .main-photo { 
+            position: absolute; right: 0; top: 0; width: 40%; height: 100%; z-index: 0; 
+            border-left: 4px solid var(--primary-red);
+            background-size: 100% 100%; /* Default Fit XY system fallback */
+            background-position: center center;
+            background-repeat: no-repeat;
+        }
+
+        /* --- BACK CARD INTERNAL STYLING --- */
+        .back-left { width: 55%; height: 100%; padding: 15px 10px; position: relative; z-index: 3; }
+        .profile-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+        .profile-icon { width: 24px; height: 24px; background: var(--primary-red); border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+        .profile-name { font-weight: bold; font-size: 0.8rem; line-height: 1.1; }
+        .profile-title { color: var(--primary-red); font-size: 0.65rem; font-style: italic; font-weight: bold; }
+        .services-title { background: var(--dark-accent); color: #fff; display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; margin-bottom: 8px; }
+        .services-list { list-style: none; font-size: 0.65rem; font-weight: 600; }
+        .services-list li { margin-bottom: 4px; display: flex; align-items: center; gap: 5px; }
+        .services-list li::before { content: ""; display: inline-block; width: 6px; height: 6px; background-color: var(--primary-red); }
+        
+        .collage { 
+            position: absolute; right: 0; top: 0; width: 45%; height: 100%; z-index: 0; 
+            display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; 
+            gap: 2px; background: #fff; border-left: 4px solid var(--dark-accent); 
+        }
+        /* Grid child containers configured for strict background rendering */
+        .collage-thumb {
+            width: 100%; height: 100%;
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            background-color: #ddd;
+        }
+
+        /* Form Controls */
+        .input-group { margin-bottom: 14px; }
+        .control-row { margin-top: 8px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; }
+        .slider-group { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; gap: 10px; }
+        .slider-group label { margin-bottom: 0; font-size: 0.75rem; min-width: 50px; }
+        .slider-group input[type="range"] { flex: 1; accent-color: var(--primary-red); }
+
+        label { display: block; font-size: 0.8rem; margin-bottom: 5px; color: #94a3b8; font-weight: 500; }
+        
+        input[type="text"], textarea {
+            width: 100%; padding: 10px 12px; border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.25); 
+            color: #fff; font-size: 16px; outline: none; font-family: inherit;
+        }
+        input[type="text"]:focus, textarea:focus { border-color: #10b981; }
+        
+        .image-grid-container { display: grid; grid-template-columns: 1fr; gap: 12px; }
+        @media (min-width: 480px) { .image-grid-container { grid-template-columns: repeat(2, 1fr); } }
+
+        input[type="file"] { 
+            display: block; width: 100%; font-size: 0.8rem; color: #cbd5e1; 
+            background: rgba(255, 255, 255, 0.02); padding: 6px;
+            border-radius: 6px; border: 1px dashed rgba(255, 255, 255, 0.1);
+        }
+        input[type="file"]::file-selector-button {
+            padding: 6px 10px; border-radius: 4px; border: none;
+            background: #334155; color: white; margin-right: 8px;
+            cursor: pointer; font-weight: 600; font-size: 0.75rem;
+        }
+
+        /* Floating Controls Container */
+        .fab-container {
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            display: flex; justify-content: center; z-index: 100; padding: 16px;
+            background: linear-gradient(to top, rgba(15,23,42,1) 50%, rgba(15,23,42,0));
+            pointer-events: none;
+        }
+        .btn-save {
+            pointer-events: auto; background: linear-gradient(to right, #10b981, #059669);
+            color: white; border: none; padding: 12px 32px; border-radius: 30px; 
+            font-size: 1rem; font-weight: bold; box-shadow: 0 6px 18px rgba(16, 185, 129, 0.4);
+            cursor: pointer; display: flex; align-items: center; gap: 8px; -webkit-tap-highlight-color: transparent;
+        }
+        .btn-save:active { transform: scale(0.96); }
+    </style>
+</head>
+<body>
+
+    <div class="preview-section">
+        <h2>Card Preview</h2>
+        
+        <div class="switch-container">
+            <button class="switch-btn active" id="switch-front" onclick="setCardView('front')">Front View</button>
+            <button class="switch-btn" id="switch-back" onclick="setCardView('back')">Back View</button>
+        </div>
+
+        <div class="preview-wrapper show-front" id="capture-area">
+            
+            <div class="card-scaler" id="scaler-front">
+                <div class="card" id="card-front">
+                    <div class="front-content">
+                        <div id="logo-preview" style="font-size: 30px; line-height: 1; color: var(--primary-red);">👁️</div>
+                        <div class="brand-name" id="display-brand1">Queen Beauty</div>
+                        <div class="sub-brand" id="display-brand2">Glamour</div>
+                        
+                        <div class="contact-pill">
+                            <div class="phone-icon">📞</div>
+                            <span id="display-phone1">+1XXXXXXXXX</span>
+                            <span id="display-phone2">+1XXXXXXXXX</span>
+                        </div>
+                    </div>
+                    
+                    <div class="main-photo" id="img-main" style="background-image: url('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=60'); background-size: cover;"></div>
+                </div>
+            </div>
+
+            <div class="card-scaler" id="scaler-back">
+                <div class="card" id="card-back">
+                    <div class="back-left">
+                        <div class="profile-row">
+                            <div class="profile-icon">👤</div>
+                            <div>
+                                <div class="profile-name" id="display-name">Elizabeth Lipeunim</div>
+                                <div class="profile-title" id="display-title">C.E.O</div>
+                            </div>
+                        </div>
+                        
+                        <div class="services-title">OUR SERVICES:</div>
+                        <ul class="services-list" id="display-services">
+                            <li>MAKEUP</li>
+                            <li>BRAIDS</li>
+                            <li>INSTALLATION</li>
+                            <li>PEDICURE</li>
+                            <li>REVAMPING</li>
+                            <li>MASSAGE</li>
+                        </ul>
+                    </div>
+
+                    <div class="collage">
+                        <div class="collage-thumb" id="img-col1" style="background-image: url('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=60');"></div>
+                        <div class="collage-thumb" id="img-col2" style="background-image: url('https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=60');"></div>
+                        <div class="collage-thumb" id="img-col3" style="background-image: url('https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=60');"></div>
+                        <div class="collage-thumb" id="img-col4" style="background-image: url('https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=60');"></div>
+                        <div class="collage-thumb" id="img-col5" style="background-image: url('https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=60');"></div>
+                        <div class="collage-thumb" id="img-col6" style="background-image: url('https://images.unsplash.com/photo-1521119989659-a83eee488004?w=150&auto=format&fit=crop&q=60');"></div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <div class="scrollable-tools">
+        
+        <div class="glass-panel">
+            <h2>Text Editor</h2>
+            <div class="input-group">
+                <label>Brand Name (Top)</label>
+                <input type="text" id="input-brand1" value="Queen Beauty">
+            </div>
+            <div class="input-group">
+                <label>Brand Name (Bottom)</label>
+                <input type="text" id="input-brand2" value="Glamour">
+            </div>
+            <div class="input-group">
+                <label>Phone 1</label>
+                <input type="text" id="input-phone1" value="+1XXXXXXXXX">
+            </div>
+            <div class="input-group">
+                <label>Phone 2</label>
+                <input type="text" id="input-phone2" value="+1XXXXXXXXX">
+            </div>
+            <div class="input-group">
+                <label>CEO Name</label>
+                <input type="text" id="input-name" value="Elizabeth Lipeunim">
+            </div>
+            <div class="input-group">
+                <label>Title</label>
+                <input type="text" id="input-title" value="C.E.O">
+            </div>
+            <div class="input-group">
+                <label>Services (Comma separated)</label>
+                <textarea id="input-services" rows="3">MAKEUP, BRAIDS, INSTALLATION, PEDICURE, REVAMPING, MASSAGE</textarea>
+            </div>
+        </div>
+
+        <div class="glass-panel">
+            <h2>Image Editor & Positioning</h2>
+            <div class="image-grid-container">
+                
+                <div class="input-group" style="grid-column: 1 / -1;">
+                    <label>Front Main Photo</label>
+                    <input type="file" accept="image/*" onchange="loadFile(event, 'img-main')">
+                    
+                    <div class="control-row">
+                        <div class="slider-group">
+                            <label>Zoom</label>
+                            <input type="range" id="adjust-scale" min="100" max="300" value="100" oninput="updateImageAdjustments()">
+                        </div>
+                        <div class="slider-group">
+                            <label>Move X</label>
+                            <input type="range" id="adjust-x" min="-100" max="100" value="0" oninput="updateImageAdjustments()">
+                        </div>
+                        <div class="slider-group">
+                            <label>Move Y</label>
+                            <input type="range" id="adjust-y" min="-100" max="100" value="0" oninput="updateImageAdjustments()">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Back Collage Photo 1</label>
+                    <input type="file" accept="image/*" onchange="loadFile(event, 'img-col1')">
+                </div>
+                <div class="input-group">
+                    <label>Back Collage Photo 2</label>
+                    <input type="file" accept="image/*" onchange="loadFile(event, 'img-col2')">
+                </div>
+                <div class="input-group">
+                    <label>Back Collage Photo 3</label>
+                    <input type="file" accept="image/*" onchange="loadFile(event, 'img-col3')">
+                </div>
+                <div class="input-group">
+                    <label>Back Collage Photo 4</label>
+                    <input type="file" accept="image/*" onchange="loadFile(event, 'img-col4')">
+                </div>
+                <div class="input-group">
+                    <label>Back Collage Photo 5</label>
+                    <input type="file" accept="image/*" onchange="loadFile(event, 'img-col5')">
+                </div>
+                <div class="input-group">
+                    <label>Back Collage Photo 6</label>
+                    <input type="file" accept="image/*" onchange="loadFile(event, 'img-col6')">
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="fab-container">
+        <button class="btn-save" onclick="saveCard()">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+            Save Images
+        </button>
+    </div>
+
+    <script>
+        function setCardView(viewState) {
+            const wrapper = document.getElementById('capture-area');
+            const btnFront = document.getElementById('switch-front');
+            const btnBack = document.getElementById('switch-back');
+
+            if (viewState === 'front') {
+                wrapper.classList.remove('show-back');
+                wrapper.classList.add('show-front');
+                btnFront.classList.add('active');
+                btnBack.classList.remove('active');
+            } else {
+                wrapper.classList.remove('show-front');
+                wrapper.classList.add('show-back');
+                btnBack.classList.add('active');
+                btnFront.classList.remove('active');
+            }
+        }
+
+        // Live Custom Image Shifter calculation system
+        function updateImageAdjustments() {
+            const imgMain = document.getElementById('img-main');
+            const scale = document.getElementById('adjust-scale').value;
+            const xOffset = document.getElementById('adjust-x').value;
+            const yOffset = document.getElementById('adjust-y').value;
+
+            // Direct CSS properties mapping that translates into HTML2Canvas output flawlessly
+            imgMain.style.backgroundSize = `${scale}%`;
+            imgMain.style.backgroundPosition = `calc(50% + ${xOffset}px) calc(50% + ${yOffset}px)`;
+        }
+
+        const bindText = (inputId, displayId) => {
+            document.getElementById(inputId).addEventListener('input', function(e) {
+                document.getElementById(displayId).innerText = e.target.value;
+            });
+        };
+
+        bindText('input-brand1', 'display-brand1');
+        bindText('input-brand2', 'display-brand2');
+        bindText('input-phone1', 'display-phone1');
+        bindText('input-phone2', 'display-phone2');
+        bindText('input-name', 'display-name');
+        bindText('input-title', 'display-title');
+
+        document.getElementById('input-services').addEventListener('input', function(e) {
+            const services = e.target.value.split(',');
+            const listContainer = document.getElementById('display-services');
+            listContainer.innerHTML = '';
+            services.forEach(service => {
+                if(service.trim() !== '') {
+                    const li = document.createElement('li');
+                    li.innerText = service.trim().toUpperCase();
+                    listContainer.appendChild(li);
+                }
+            });
+        });
+
+        // Reader conversion optimized to target background instances directly
+        const loadFile = (event, elementId) => {
+            const container = document.getElementById(elementId);
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    container.style.backgroundImage = `url('${e.target.result}')`;
+                    if (elementId === 'img-main') {
+                        // Reset control sliders when a new primary photo is loaded
+                        document.getElementById('adjust-scale').value = 100;
+                        document.getElementById('adjust-x').value = 0;
+                        document.getElementById('adjust-y').value = 0;
+                        container.style.backgroundSize = "cover";
+                        container.style.backgroundPosition = "center center";
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+
+        function saveCard() {
+            const captureArea = document.getElementById('capture-area');
+            const scalerFront = document.getElementById('scaler-front');
+            const scalerBack = document.getElementById('scaler-back');
+            
+            const originalBg = captureArea.style.background;
+            const originalPadding = captureArea.style.padding;
+            const originalGap = captureArea.style.gap;
+            const wasShowingFront = captureArea.classList.contains('show-front');
+
+            captureArea.classList.remove('show-front', 'show-back');
+            scalerFront.style.display = 'flex';
+            scalerBack.style.display = 'flex';
+            scalerFront.style.transform = 'none';
+            scalerBack.style.transform = 'none';
+            scalerFront.style.margin = '0';
+            scalerBack.style.margin = '0';
+            
+            captureArea.style.background = '#f1f5f9'; 
+            captureArea.style.padding = '30px';
+            captureArea.style.gap = '30px';
+
+            html2canvas(captureArea, {
+                scale: 3, 
+                useCORS: true,
+                backgroundColor: '#f1f5f9'
+            }).then(canvas => {
+                captureArea.style.background = originalBg;
+                captureArea.style.padding = originalPadding;
+                captureArea.style.gap = originalGap;
+                
+                scalerFront.style.display = '';
+                scalerBack.style.display = '';
+                scalerFront.style.transform = '';
+                scalerBack.style.transform = '';
+                scalerFront.style.margin = '';
+                scalerBack.style.margin = '';
+
+                if (wasShowingFront) {
+                    captureArea.classList.add('show-front');
+                } else {
+                    captureArea.classList.add('show-back');
+                }
+
+                const link = document.createElement('a');
+                link.download = 'business-card-composition.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }).catch(err => {
+                console.error("Error generating image: ", err);
+                alert("Failed to generate image.");
+                
+                captureArea.style.background = originalBg;
+                captureArea.style.padding = originalPadding;
+                captureArea.style.gap = originalGap;
+                scalerFront.style.display = '';
+                scalerBack.style.display = '';
+                scalerFront.style.transform = '';
+                scalerBack.style.transform = '';
+                if (wasShowingFront) {
+                    captureArea.classList.add('show-front');
+                } else {
+                    captureArea.classList.add('show-back');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
