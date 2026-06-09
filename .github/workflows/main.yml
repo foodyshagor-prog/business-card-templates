@@ -1,1 +1,27 @@
+name: Generate JSON
+on:
+  push:
+    paths:
+      - '**.html'
+  workflow_dispatch:
 
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+      - name: Generate JSON
+        run: |
+          # 50ti file-er jonno JSON list toiri kora
+          echo '{"cards": [' > all-cards.json
+          find . -maxdepth 1 -name "business_card*.html" -printf '{"id": "%f", "title": "%f", "url": "https://foodyshagor-prog.github.io/business-card-templates/%f", "image_url": "https://foodyshagor-prog.github.io/business-card-templates/images/%f.jpg"},' | sed 's/\.html//g' | sed 's/,$//' >> all-cards.json
+          echo ']}' >> all-cards.json
+      - name: Commit and Push
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@github.com'
+          git add all-cards.json
+          git commit -m "Auto-update 50 cards JSON" || echo "No changes to commit"
+          git push
