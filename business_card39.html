@@ -26,7 +26,8 @@
         body {
             background: linear-gradient(180deg, var(--bg-dark) 0%, #030712 100%);
             color: var(--text-main);
-            min-height: 100vh;
+            /* FIXED: Changed from min-height to height (dvh handles mobile viewports perfectly) */
+            height: 100dvh; 
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -317,7 +318,6 @@
     <script>
         let currentView = 'front';
 
-        // Synchronize changes instantaneously
         function updateText(elementId, textValue) {
             const element = document.getElementById(elementId);
             if (element) {
@@ -325,7 +325,6 @@
             }
         }
 
-        // Handle page layout display swaps
         function setView(viewMode) {
             currentView = viewMode;
             
@@ -353,25 +352,20 @@
             }
         }
 
-        // High-Resolution Presentation Renderer (Combines both sides vertically)
         function exportCardImage() {
             const frontSvg = document.getElementById('card-front');
             const backSvg = document.getElementById('card-back');
             
-            // Dimensions for each card
             const cardWidth = 1050;
             const cardHeight = 600;
             
-            // Presentation padding variables
             const paddingX = 100;
             const paddingY = 100;
             const separationGap = 80;
 
-            // Compute total display surface boundaries
             const canvasWidth = cardWidth + (paddingX * 2);
             const canvasHeight = (cardHeight * 2) + (paddingY * 2) + separationGap;
 
-            // Serialize vector elements safely
             const frontString = new XMLSerializer().serializeToString(frontSvg);
             const backString = new XMLSerializer().serializeToString(backSvg);
 
@@ -394,21 +388,17 @@
                     compileCanvas.height = canvasHeight;
                     const context = compileCanvas.getContext('2d');
 
-                    // 1. Fill base presentation viewport color (#f0f2f5)
                     context.fillStyle = '#f0f2f5';
                     context.fillRect(0, 0, canvasWidth, canvasHeight);
 
-                    // 2. Draw Front Side (Centered, Top half)
                     const frontX = paddingX;
                     const frontY = paddingY;
                     context.drawImage(imgFront, frontX, frontY, cardWidth, cardHeight);
 
-                    // 3. Draw Back Side (Centered, Bottom half)
                     const backX = paddingX;
                     const backY = paddingY + cardHeight + separationGap;
                     context.drawImage(imgBack, backX, backY, cardWidth, cardHeight);
 
-                    // 4. Transform composite drawing into downstream download stream
                     const outputUrl = compileCanvas.toDataURL('image/png');
                     
                     const triggerLink = document.createElement('a');
@@ -418,7 +408,6 @@
                     triggerLink.click();
                     document.body.removeChild(triggerLink);
 
-                    // Clean allocated memory links safely
                     URL.revokeObjectURL(frontUrl);
                     URL.revokeObjectURL(backUrl);
                 }
